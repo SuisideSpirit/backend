@@ -1,14 +1,10 @@
-import mongoose, { connect } from "mongoose";
-import {DB_NAME} from "./constants.js"
-import express from "express"
-import dotenv from "dotenv"
 import connectDB from "./db/index.js";
+import dotenv from "dotenv"
+import {app} from './app.js'
 
-dotenv.config({
-    path :"./env"
-})
+dotenv.config()
 
-
+console.log(process.env.PORT)
 connectDB() 
 .then (()=>{
     app.listen(process.env.PORT || 8000 , () =>{
@@ -16,7 +12,7 @@ connectDB()
     })
 })
 .catch((error) =>{
-    console.log("Mongo DB not connected")
+    console.error(error);
 })
 
 
