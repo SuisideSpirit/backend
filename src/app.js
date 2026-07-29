@@ -22,7 +22,6 @@ app.use(cookieParser())
 import userRouter from "./routes/user.routes.js"
 
 
-
 // routes declaration 
 app.get("/test", (req, res) => {
     res.json({ message: "Server is working" });
