@@ -90,7 +90,7 @@ const registerUser = asyncHandler(async (req , res) => {
     )
 })
 
-const loginUser = asyncHandler(async (req ,res) => {
+const loginUser = asyncHandler(async(req ,res) => {
     // req body -> data 
     // username or by email 
     // find user 
@@ -142,7 +142,7 @@ const loginUser = asyncHandler(async (req ,res) => {
     )
 })
 
-const logoutUser = asyncHandler(async (req , res) => {
+const logoutUser = asyncHandler(async(req , res) => {
     await User.findByIdAndUpdate(
         req.user._id , 
         {
@@ -165,7 +165,7 @@ const logoutUser = asyncHandler(async (req , res) => {
 
 })
 
-const refreshAccessToken = asyncHandler(async (req , res)=>{
+const refreshAccessToken = asyncHandler(async(req , res)=>{
     const incommingRefreshToken = req.cookie.refreshToken || req.body.refreshAccessToken
 
     if(!incommingRefreshToken){
@@ -224,7 +224,7 @@ const changeCurrentPassword = asyncHandler(async(req , res)=>{
     )
 })
 
-const getCurrentUser = asyncHandler((req, res) =>{
+const getCurrentUser = asyncHandler(async (req, res) =>{
     return res
     .status(200)
     .json(
@@ -233,14 +233,14 @@ const getCurrentUser = asyncHandler((req, res) =>{
 
 })
 
-const updateAccountDetails = asyncHandler((req, res)=> {
+const updateAccountDetails = asyncHandler(async (req, res)=> {
     const {fullname , email} = req.body 
 
     if(!fullname || !email){
         throw new ApiError(400 , "Info Required")
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set :{
@@ -258,7 +258,7 @@ const updateAccountDetails = asyncHandler((req, res)=> {
     )
 })
 
-const updateUserAvatar = asyncHandler((req , res)=>{
+const updateUserAvatar = asyncHandler(async (req , res)=>{
     const avatarLocalPath = req.file?.path
 
     if(!avatarLocalPath){
@@ -285,7 +285,7 @@ const updateUserAvatar = asyncHandler((req , res)=>{
     )
 })
 
-const updateUserCoverImage = asyncHandler((req , res)=>{
+const updateUserCoverImage = asyncHandler(async (req , res)=>{
     const coverImageLocalPath = req.file?.path
 
     if(!coverImageLocalPath){
@@ -311,6 +311,79 @@ const updateUserCoverImage = asyncHandler((req , res)=>{
         new ApiResponse(200 , user , "Account cover image updated successfully")
     )
 })
+
+const getUserChannelProfile = asyncHandler(async(req , res) => {
+    const {username} = req.params
+
+    if(!username?.trim()){
+        throw new ApiError(400 , "username is missing")
+
+        const channel = await User.aggregate([
+            {
+                $match:{
+                    username : username?.toLowerCase()
+                }
+            },
+            {
+                $lookup:{
+                    from : "Subscription",
+                    localField : "_id" , 
+                    foreignField : "channel",
+                    as: "subscriber"
+                }
+            },
+            {
+                $lookup:{
+                    from : "Subscription",
+                    localField : "_id" , 
+                    foreignField : "subscriber",
+                    as: "subscriberTo"
+                }
+            },
+            {
+                $addFields :{
+                    subscriberCount : {
+                        $size : "$subscriber"
+                    },
+                    channnelSubscribedToCount :{
+                        $size : "$susbscribedTo"
+                    },
+                    isSubscribed :{
+                        $cond :{
+                            if: {$in : [req.user?._id , "$subscriber.subscriber"]},
+                            then:true ,
+                            else :false 
+                        }
+                    }
+                }
+            },
+            {
+                project:{
+                    fullname : 1 , 
+                    username : 1 . 
+                    subscriberCount , 
+                    channnelSubscribedToCount , 
+                    isSubscribed , 
+                    avatar : 1, 
+                    coverImage : 1 ,
+                    email : 1 
+                }
+            }
+        ])
+        console.log(channel) 
+
+        if(!channel?.length){
+            throw new ApiError(404 , "channel does not exists") 
+        }
+
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(200 , channel[0] , "We got the channel and response")
+        )
+    }
+})
+
 export {registerUser , loginUser ,
     logoutUser , refreshAccessToken , 
     getCurrentUser , changeCurrentPassword, 
